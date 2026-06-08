@@ -1,0 +1,119 @@
+
+(rules PCB Quake_PCB_3
+  (snap_angle 
+    fortyfive_degree
+  )
+  (autoroute_settings
+    (fanout off)
+    (autoroute on)
+    (postroute on)
+    (vias on)
+    (via_costs 50)
+    (plane_via_costs 5)
+    (start_ripup_costs 100)
+    (start_pass_no 758)
+    (layer_rule F.Cu
+      (active on)
+      (preferred_direction horizontal)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 2.3)
+    )
+    (layer_rule B.Cu
+      (active on)
+      (preferred_direction vertical)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 1.8)
+    )
+  )
+  (rule
+    (width 200.0)
+    (clear 200.0)
+    (clear 100.0 (type smd_to_turn_gap))
+    (clear 300.0 (type default_Power))
+    (clear 50.0 (type smd_smd))
+    (clear 300.0 (type smd_Power))
+    (clear 300.0 (type "kicad_default"_Power))
+    (clear 300.0 (type Power_Power))
+  )
+  (padstack "Via[0-1]_800:400_um"
+    (shape
+      (circle F.Cu 800.0 0.0 0.0)
+    )
+    (shape
+      (circle B.Cu 800.0 0.0 0.0)
+    )
+    (attach off)
+  )
+  (padstack "Via[0-1]_1000:600_um"
+    (shape
+      (circle F.Cu 1000.0 0.0 0.0)
+    )
+    (shape
+      (circle B.Cu 1000.0 0.0 0.0)
+    )
+    (attach off)
+  )
+  (via 
+    "Via[0-1]_800:400_um" "Via[0-1]_800:400_um" default
+  )
+  (via 
+    "Via[0-1]_1000:600_um" "Via[0-1]_1000:600_um" default
+  )
+  (via 
+    "Via[0-1]_800:400_um-kicad_default" "Via[0-1]_800:400_um" "kicad_default"
+  )
+  (via 
+    "Via[0-1]_1000:600_um-kicad_default" "Via[0-1]_1000:600_um" "kicad_default"
+  )
+  (via 
+    "Via[0-1]_800:400_um-Power" "Via[0-1]_800:400_um" Power
+  )
+  (via 
+    "Via[0-1]_1000:600_um-Power" "Via[0-1]_1000:600_um" Power
+  )
+  (via_rule
+    default "Via[0-1]_800:400_um"
+  )
+  (via_rule
+    "kicad_default" "Via[0-1]_800:400_um-kicad_default"
+  )
+  (via_rule
+    Power "Via[0-1]_1000:600_um-Power"
+  )
+  (class default
+    (clearance_class default)
+    (via_rule default)
+    (rule
+      (width 200.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+  (class "kicad_default"
+    "unconnected-(SW1-Pad1)" "/Feather V2/RST" "unconnected-(SW1-Pad4)" "/LED_CAL" "Net-(D1-A)" "Net-(D2-A)" "/LED_OPER" /MISO
+    "/CS_ACC1" /MOSI /SCK "/CS_ACC2" "/CS_ACC3" "/CS_ACC4" "unconnected-(J2-Pin_14-Pad14)" "unconnected-(J2-Pin_3-Pad3)"
+    "unconnected-(J2-Pin_2-Pad2)" "unconnected-(J2-Pin_9-Pad9)" "unconnected-(J2-Pin_10-Pad10)" "unconnected-(J2-Pin_1-Pad1)" "/CS_SD" "unconnected-(J2-Pin_8-Pad8)" "unconnected-(J1-Pin_12-Pad12)" "unconnected-(J1-Pin_10-Pad10)"
+    "unconnected-(J1-Pin_8-Pad8)" "unconnected-(J1-Pin_2-Pad2)" "unconnected-(J1-Pin_7-Pad7)" "unconnected-(J1-Pin_1-Pad1)" "unconnected-(J1-Pin_6-Pad6)" "/Feather V2/EN" "unconnected-(J7-Pin_9-Pad9)" "unconnected-(J7-Pin_7-Pad7)"
+    "unconnected-(J7-Pin_8-Pad8)"
+    (clearance_class "kicad_default")
+    (via_rule kicad_default)
+    (rule
+      (width 200.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+  (class Power
+    GND /Vcc
+    (clearance_class Power)
+    (via_rule Power)
+    (rule
+      (width 300.0)
+    )
+    (circuit 
+      (use_layer F.Cu B.Cu)
+    )
+  )
+)

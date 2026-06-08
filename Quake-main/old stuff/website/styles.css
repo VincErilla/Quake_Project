@@ -1,0 +1,134 @@
+/* Reset basic styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Container styles */
+.container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #ffffff;
+    color: #757575;
+}
+
+/* Header */
+header {
+    background-color: #ffffff;
+    padding: 30px 20px;
+    text-align: center;
+    border-bottom: 3px solid #dddddd;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    background-color: #fe5c00;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    color: #000000;
+    margin-bottom: 5px;
+}
+
+header p {
+    font-size: 1rem;
+    color: #757575;
+}
+
+/* Controls Section */
+.controls {
+    display: flex;
+    justify-content: center;
+    padding: 15px 0;
+}
+
+.export-btn {
+    background-color: #fe5c00;
+    color: #ffffff;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.export-btn:hover {
+    background-color: #cc4b00;
+}
+
+/* Output Stream Section */
+.output-stream {
+    flex: 1;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-top: 2px solid #000000;
+    margin-bottom: 15px;
+}
+
+.output-stream h2 {
+    margin-bottom: 10px;
+    color: #fe5c00;
+    font-size: 1.5rem;
+    border-bottom: 2px solid #fe5c00;
+}
+
+/* Label Row */
+.stream-labels {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    /* 5 equal columns for XYZ */
+    gap: 10px;
+    background-color: #dddddd;
+    padding: 10px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.stream-labels:nth-of-type(2) {
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    /* 5 equal columns for GPS */
+}
+
+/* Stream Content */
+.stream-content {
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: #ffffff;
+    padding: 10px;
+    border: 1px solid #000000;
+}
+
+.stream-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    /* 5 equal columns for XYZ */
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid #dddddd;
+    text-align: center;
+}
+
+/* Adjust for GPS stream rows */
+#gps-stream .stream-row {
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    /* 5 equal columns for GPS */
+}
+
+/* Footer */
+footer {
+    background-color: #f9f9f9;
+    text-align: center;
+    padding: 10px;
+    font-size: 0.9rem;
+    color: #757575;
+    border-top: 2px solid #dddddd;
+}

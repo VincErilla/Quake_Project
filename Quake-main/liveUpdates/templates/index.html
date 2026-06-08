@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <title>Live Sensor Data</title>
+</head>
+
+<body>
+    <h1>Real-Time Sensor Data</h1>
+    <div id="graph"></div>
+
+    <script>
+        // Initialize the Plotly graph
+        let layout = {
+            title: 'Live Sensor Data',
+            xaxis: { title: 'Time' },
+            yaxis: { title: 'Sensor Reading' }
+        };
+
+        // Create an empty Plotly graph
+        Plotly.newPlot('graph', [{ x: [], y: [], type: 'scatter' }], layout);
+
+        // Function to fetch new data and update the graph
+        function updateGraph() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    // Update the graph with all buffered data
+                    Plotly.update('graph', {
+                        x: [data.x],
+                        y: [data.y]
+                    });
+                });
+        }
+
+        // Update the graph every 2 seconds
+        setInterval(updateGraph, 2000);
+    </script>
+</body>
+
+</html>

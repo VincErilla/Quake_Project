@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OSU Quake</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="script.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>OSU Quake</h1>
+      <p>Real-time vibration and gps data</p>
+    </header>
+
+    <div class="controls">
+      <button class="export-btn" onclick="exportData()">Export Info</button>
+    </div>
+
+    <div class="output-stream">
+      <h2>XYZ Data Stream</h2>
+      <div class="stream-labels">
+        <span>Timestamp</span>
+        <span>X (g)</span>
+        <span>Y (g)</span>
+        <span>Z (g)</span>
+        <span>RMS</span>
+      </div>
+      <div id="xyz-stream" class="stream-content"></div>
+    </div>
+
+    <div class="output-stream">
+      <h2>GPS Data Stream</h2>
+      <div class="stream-labels">
+        <span>Timestamp</span>
+        <span>Latitude (°)</span>
+        <span>Longitude (°)</span>
+        <span>Altitude (FAMSL)</span>
+        <span>Coordinates (DMS)</span> <!-- New Column -->
+      </div>
+      <div id="gps-stream" class="stream-content"></div>
+    </div>
+
+    <footer>
+      <p>Developed at Oklahoma State University 2024</p>
+    </footer>
+  </div>
+</body>
+
+</html>
