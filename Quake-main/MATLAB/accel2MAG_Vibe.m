@@ -3,9 +3,9 @@ clear; clc;
 delete(serialportfind); % Clear any stuck serial handles
 
 % --- Configuration ---
-port = "COM13";        % <-- Your verified working port
+port = "COM8";        % <-- Your verified working port
 baudrate = 115200;
-Fs = 166.67;              % Data stream frequency (100 Hz)
+Fs = 166.66;              % Data stream frequency (100 Hz)
 viewWindowSeconds = 5; 
 numSamples = round(Fs * viewWindowSeconds); % 2500 samples
 
