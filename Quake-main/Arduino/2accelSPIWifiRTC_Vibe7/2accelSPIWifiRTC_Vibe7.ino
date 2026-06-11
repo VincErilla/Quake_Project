@@ -55,18 +55,18 @@ float last_x2 = 0.0, last_y2 = 0.0, last_z2 = 1.0;
 
 // Precision Ellipsoidal Calibration Coefficients
 const float A1_inv[3][3] = {
- {1.168990, -0.011695, 0.058807}, 
- {-0.011695, 1.047109, 0.002516}, 
- {0.058807, 0.002516, 1.037499}   
+ {1.224426, 0.022806, 0.017952}, 
+ {0.022806, 1.040584, -0.033441}, 
+ {0.017952, -0.033441, 1.073030}   
 };
-const float b1[3] = {0.023527, -0.039729, -0.049927};
+const float b1[3] = {-0.022412, -0.045520, -0.094355};
 
 const float A2_inv[3][3] = {
- {1.392591, -0.051946, -0.052174}, 
- {-0.051946, 1.129836, 0.026816}, 
- {-0.052174, 0.026816, 1.076754} 
+ {1.174304, -0.018755, -0.076771}, 
+ {-0.018755, 1.037578, -0.044846}, 
+ {-0.076771, -0.044846, 1.042790} 
 };
-const float b2[3] = {-0.046098, 0.043372, 0.001480};
+const float b2[3] = {-0.023997, -0.002074, 0.005295};
 
 TaskHandle_t sdWriterTaskHandle;
 String activeBuffer = "";
@@ -275,7 +275,9 @@ void loop() {
 
     xyzFloat e1, e2;
     accel1.getGValues(&e1);
+    delayMicroseconds(20);
     accel2.getGValues(&e2);
+    delayMicroseconds(20);
 
     // --- RAW VALUES FAULT INTERCEPTION: SENSOR 1 ---
     float x1_raw, y1_raw, z1_raw;
@@ -284,7 +286,9 @@ void loop() {
       Serial.printf("RAW EVENT: X=%.6f Y=%.6f Z=%.6f\n", e1.x, e1.y, e1.z);
       x1_raw = last_x1; y1_raw = last_y1; z1_raw = last_z1;
     } else {
-      x1_raw = e1.x; y1_raw = e1.y; z1_raw = e1.z;
+      x1_raw = e1.x; 
+      y1_raw = e1.y; 
+      z1_raw = e1.z;
       last_x1 = x1_raw; last_y1 = y1_raw; last_z1 = z1_raw;
     }
 
@@ -295,7 +299,9 @@ void loop() {
       Serial.printf("RAW EVENT: X=%.6f Y=%.6f Z=%.6f\n", e2.x, e2.y, e2.z);
       x2_raw = last_x2; y2_raw = last_y2; z2_raw = last_z2;
     } else {
-      x2_raw = e2.x; y2_raw = e2.y; z2_raw = e2.z;
+      x2_raw = e2.x; 
+      y2_raw = e2.y; 
+      z2_raw = e2.z;
       last_x2 = x2_raw; last_y2 = y2_raw; last_z2 = z2_raw;
     }
 
