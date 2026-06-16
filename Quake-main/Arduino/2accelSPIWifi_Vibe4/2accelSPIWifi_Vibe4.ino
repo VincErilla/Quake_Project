@@ -223,13 +223,27 @@ void setup() {
   }
 
   spiAccel.begin(HSPI_SCK, HSPI_MISO, HSPI_MOSI, -1);
-  if (!accel1.init() || !accel2.init()) {
-    Serial.println("Accelerometer init failed!");
+  // --- INDEPENDENT HARDWARE INITIALIZATION CHECKS ---
+  bool init1 = accel1.init();
+  bool init2 = accel2.init();
+
+  if (!init1 || !init2) {
+    if (!init1 && !init2) {
+      Serial.println("CRITICAL ERROR: BOTH Accelerometers failed to initialize! Check HSPI Bus Lines.");
+    } else if (!init1) {
+      Serial.println("ERROR: Sensor 1 (CS pin 32) failed to initialize! Check connection.");
+    } else if (!init2) {
+      Serial.println("ERROR: Sensor 2 (CS pin 20) failed to initialize! Check connection.");
+    }
+
+    // Halt system and blink error code on the hardware LEDs
     while (1) {
       digitalWrite(LED_RED, HIGH); digitalWrite(LED_BLUE, HIGH); delay(250);
       digitalWrite(LED_RED, LOW); digitalWrite(LED_BLUE, LOW); delay(250);
     }
   }
+
+  Serial.println("SPI Accelerometer Bus Online. Both sensors initialized successfully.");
 
   accel1.setDataRate(ADXL345_DATA_RATE_1600);
   accel2.setDataRate(ADXL345_DATA_RATE_1600);

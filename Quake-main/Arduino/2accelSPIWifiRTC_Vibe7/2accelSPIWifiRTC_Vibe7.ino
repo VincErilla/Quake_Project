@@ -242,8 +242,8 @@ void setup() {
     }
   }
 
-  accel1.setDataRate(ADXL345_DATA_RATE_1600);
-  accel2.setDataRate(ADXL345_DATA_RATE_1600);
+  accel1.setDataRate(ADXL345_DATA_RATE_800);
+  accel2.setDataRate(ADXL345_DATA_RATE_800);
   accel1.setRange(ADXL345_RANGE_16G);
   accel2.setRange(ADXL345_RANGE_16G);
 
@@ -281,29 +281,29 @@ void loop() {
 
     // --- RAW VALUES FAULT INTERCEPTION: SENSOR 1 ---
     float x1_raw, y1_raw, z1_raw;
-    if (e1.x == 0.0 && e1.y == 0.0 && e1.z == 0.0) {
-      Serial.println("*** SENSOR 1 ALL ZEROS ***");
-      Serial.printf("RAW EVENT: X=%.6f Y=%.6f Z=%.6f\n", e1.x, e1.y, e1.z);
-      x1_raw = last_x1; y1_raw = last_y1; z1_raw = last_z1;
-    } else {
-      x1_raw = e1.x; 
-      y1_raw = e1.y; 
-      z1_raw = e1.z;
-      last_x1 = x1_raw; last_y1 = y1_raw; last_z1 = z1_raw;
-    }
+    // if (e1.x == 0.0 && e1.y == 0.0 && e1.z == 0.0) {
+    //   Serial.println("*** SENSOR 1 ALL ZEROS ***");
+    //   Serial.printf("RAW EVENT: X=%.6f Y=%.6f Z=%.6f\n", e1.x, e1.y, e1.z);
+    //   x1_raw = last_x1; y1_raw = last_y1; z1_raw = last_z1;
+    // } else {
+    //   x1_raw = e1.x; 
+    //   y1_raw = e1.y; 
+    //   z1_raw = e1.z;
+    //   last_x1 = x1_raw; last_y1 = y1_raw; last_z1 = z1_raw;
+    // }
 
     // --- RAW VALUES FAULT INTERCEPTION: SENSOR 2 ---
     float x2_raw, y2_raw, z2_raw;
-    if (e2.x == 0.0 && e2.y == 0.0 && e2.z == 0.0) {
-      Serial.println("*** SENSOR 2 ALL ZEROS ***");
-      Serial.printf("RAW EVENT: X=%.6f Y=%.6f Z=%.6f\n", e2.x, e2.y, e2.z);
-      x2_raw = last_x2; y2_raw = last_y2; z2_raw = last_z2;
-    } else {
-      x2_raw = e2.x; 
-      y2_raw = e2.y; 
-      z2_raw = e2.z;
-      last_x2 = x2_raw; last_y2 = y2_raw; last_z2 = z2_raw;
-    }
+    // if (e2.x == 0.0 && e2.y == 0.0 && e2.z == 0.0) {
+    //   Serial.println("*** SENSOR 2 ALL ZEROS ***");
+    //   Serial.printf("RAW EVENT: X=%.6f Y=%.6f Z=%.6f\n", e2.x, e2.y, e2.z);
+    //   x2_raw = last_x2; y2_raw = last_y2; z2_raw = last_z2;
+    // } else {
+    //   x2_raw = e2.x; 
+    //   y2_raw = e2.y; 
+    //   z2_raw = e2.z;
+    //   last_x2 = x2_raw; last_y2 = y2_raw; last_z2 = z2_raw;
+    // }
 
     // Apply Calibration Matrices safely onto filtered, non-zero raw variables
     float x1_cal = x1_raw; float y1_cal = y1_raw; float z1_cal = z1_raw;

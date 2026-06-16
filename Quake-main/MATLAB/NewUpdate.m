@@ -17,7 +17,7 @@ spec_fmax     = 200;          % spectrogram display cap (Hz)
 %% ----------------------------
 % Load data
 % ----------------------------
-data = readtable('quakeData_84.csv');  % Adjust filename
+data = readtable('quakeData_2.csv');  % Adjust filename
 time_full = data{:,1};
 
 % Select time range
@@ -42,7 +42,7 @@ time = time_full(idx) - t_initial;   % re-zeroed time
 % ----------------------------
 X2_raw = data{idx,2};
 Y2_raw = data{idx,3};
-Z2_raw = data{idx,4};         % 4 = sensor1, 7 = sensor2
+Z2_raw = data{idx,7};         % 4 = sensor1, 7 = sensor2
 fs = 1 / mean(diff(time));    % sampling frequency (Hz)
 
 fprintf('Sampling Frequency = %.2f Hz\n', fs);
