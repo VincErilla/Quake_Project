@@ -13,7 +13,8 @@ numSamples = round(Fs * viewWindowSeconds); % 2500 samples
 defaultZRange   = 0.5;  % View window size around the 1.0g baseline (+/-0.5g)
 defaultMagMax   = 1.5;  % Upper boundary for the filtered magnitude
 
-% --- RESTORED: Big Boss Bandpass Filter Setup (10-175 Hz, 8th Order) ---
+% --- RESTORED: Big Boss Bandpass Filter Setup (10-175 Hz, 8th Order)
+% ---ccc
 bpFilt = designfilt('bandpassiir','FilterOrder',8,...
     'HalfPowerFrequency1',10,'HalfPowerFrequency2',75,'SampleRate',Fs);
 

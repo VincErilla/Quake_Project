@@ -26,6 +26,8 @@ String latestData = "";
 #define HSPI_SCK 14
 #define CS1 32
 #define CS2 20
+#define CS3 21   // <-- NEW: Cable 2, Sensor 1
+#define CS4 12   // <-- NEW: Cable 2, Sensor 2
 
 // I2C pins for RTC
 #define SDA_PIN 22
@@ -39,6 +41,8 @@ bool spi = true;
 SPIClass spiAccel(HSPI);
 ADXL345_WE accel1 = ADXL345_WE(&spiAccel, CS1, spi);
 ADXL345_WE accel2 = ADXL345_WE(&spiAccel, CS2, spi);
+ADXL345_WE accel3 = ADXL345_WE(&spiAccel, CS3, spi); // <-- NEW Object
+ADXL345_WE accel4 = ADXL345_WE(&spiAccel, CS4, spi); // <-- NEW Object
 
 RTC_DS3231 rtc;
 File f;
@@ -234,7 +238,7 @@ void setup() {
   spiAccel.begin(HSPI_SCK, HSPI_MISO, HSPI_MOSI, -1);
   spiAccel.setFrequency(500000); 
 
-  if (!accel1.init() || !accel2.init()) {
+  if (!accel1.init() || !accel4.init()) {
     Serial.println("Accelerometer init failed!");
     while (1) {
       digitalWrite(LED_RED, HIGH); digitalWrite(LED_BLUE, HIGH); delay(250);
@@ -244,8 +248,12 @@ void setup() {
 
   accel1.setDataRate(ADXL345_DATA_RATE_800);
   accel2.setDataRate(ADXL345_DATA_RATE_800);
+  accel3.setDataRate(ADXL345_DATA_RATE_800);
+  accel4.setDataRate(ADXL345_DATA_RATE_800);
   accel1.setRange(ADXL345_RANGE_16G);
   accel2.setRange(ADXL345_RANGE_16G);
+  accel3.setRange(ADXL345_RANGE_16G);
+  accel4.setRange(ADXL345_RANGE_16G);
 
   xTaskCreatePinnedToCore(writeToSDTask, "SDWriterTask", 4096, NULL, 1, &sdWriterTaskHandle, 0);
 
@@ -318,7 +326,7 @@ void loop() {
     static int serialThrottleCounter = 0;
     serialThrottleCounter++;
     if (serialThrottleCounter >= 3) { 
-        Serial.printf("%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n", t, x1_cal, y1_cal, z1_cal, x2_cal, y2_cal, z2_cal);
+        Serial.printf("%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n", t, x1_cal, y1_cal, z1_cal, x4_cal, y4_cal, z4_cal);
         serialThrottleCounter = 0; 
     }
 
