@@ -17,7 +17,7 @@ spec_fmax     = 200;          % spectrogram display cap (Hz)
 %% ----------------------------
 % Load data
 % ----------------------------
-data = readtable('quakeData_2.csv');  % Adjust filename
+data = readtable('quakeData_1.csv');  % Adjust filename
 time_full = data{:,1};
 
 % Select time range
@@ -50,7 +50,7 @@ fprintf('Sampling Period = %.6f s\n', 1/fs);
 
 % Bandpass Filter 10–175 Hz
 bpFilt = designfilt('bandpassiir', 'FilterOrder', 8, ...
-    'HalfPowerFrequency1', 10, 'HalfPowerFrequency2', 175, 'SampleRate', fs);
+    'HalfPowerFrequency1', 10, 'HalfPowerFrequency2', 160, 'SampleRate', fs);
 X2 = filtfilt(bpFilt, X2_raw);
 Y2 = filtfilt(bpFilt, Y2_raw);
 Z2 = filtfilt(bpFilt, Z2_raw);

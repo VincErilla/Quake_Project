@@ -4,19 +4,18 @@ delete(serialportfind); % Clear any stuck serial handles
 
 % --- Configuration ---
 port = "COM3";            % <-- Your verified working port
-baudrate = 115200;
-Fs = 166.66;              % Data stream frequency (100 Hz)
+baudrate = 230400;        % MATCHED TO ESP32: Serial.begin(230400)
+Fs = 800;                 % MATCHED TO ESP32: 1250 microseconds interval
 viewWindowSeconds = 5; 
-numSamples = round(Fs * viewWindowSeconds); % 2500 samples
+numSamples = round(Fs * viewWindowSeconds); 
 
 % Default limits
 defaultZRange   = 0.5;  % View window size around the 1.0g baseline (+/-0.5g)
 defaultMagMax   = 1.5;  % Upper boundary for the filtered magnitude
 
-% --- RESTORED: Big Boss Bandpass Filter Setup (10-175 Hz, 8th Order)
-% ---ccc
+% --- Big Boss Bandpass Filter Setup (10-175 Hz, 8th Order) ---
 bpFilt = designfilt('bandpassiir','FilterOrder',8,...
-    'HalfPowerFrequency1',10,'HalfPowerFrequency2',75,'SampleRate',Fs);
+    'HalfPowerFrequency1',10,'HalfPowerFrequency2',175,'SampleRate',Fs);
 
 % --- Pre-allocate Fixed-Size Graphics Buffers ---
 t_buf    = zeros(1, numSamples);
@@ -60,11 +59,12 @@ disp('Streaming... Row 1 is 8th-order Filtered | Row 2 is RAW data. Press Ctrl+C
 cleanUpObj = onCleanup(@() clear('device')); 
 
 renderCounter = 0;
-renderSkipMax = 10; % Refresh screen at 50 FPS
+renderSkipMax = 16; % Refresh screen at ~50 FPS given the higher 800Hz stream rate
 
-% Create persistent tracking buffers for historical values to let filter step correctly
-x1_raw_hist = zeros(1, 20); y1_raw_hist = zeros(1, 20); z1_raw_hist = zeros(1, 20);
-x2_raw_hist = zeros(1, 20); y2_raw_hist = zeros(1, 20); z2_raw_hist = zeros(1, 20);
+% Rolling transient buffers to give the IIR filter room to settle properly
+histSize = 150; 
+x1_raw_hist = zeros(1, histSize); y1_raw_hist = zeros(1, histSize); z1_raw_hist = zeros(1, histSize);
+x2_raw_hist = zeros(1, histSize); y2_raw_hist = zeros(1, histSize); z2_raw_hist = zeros(1, histSize);
 
 while ishandle(fig)
     if device.NumBytesAvailable > 0
@@ -86,8 +86,7 @@ while ishandle(fig)
                 y2_raw_hist = [y2_raw_hist(2:end), vals(6)];
                 z2_raw_hist = [z2_raw_hist(2:end), z2_raw];
                 
-                % --- Parallel Path 1: Filter using the native digitalFilter object directly ---
-                % This structure lets MATLAB use its native backend optimizations to update states
+                % --- Filter using standard digitalFilter block smoothly over history ---
                 xf1_arr = filter(bpFilt, x1_raw_hist); xf1 = xf1_arr(end);
                 yf1_arr = filter(bpFilt, y1_raw_hist); yf1 = yf1_arr(end);
                 zf1_arr = filter(bpFilt, z1_raw_hist); zf1 = zf1_arr(end);
@@ -100,7 +99,7 @@ while ishandle(fig)
                 mag1_dyn = sqrt(xf1^2 + yf1^2 + zf1^2);
                 mag2_dyn = sqrt(xf2^2 + yf2^2 + zf2^2);
                 
-                % --- Push into fixed rolling windows (Routing RAW Z here) ---
+                % --- Push into fixed rolling windows ---
                 t_buf    = [t_buf(2:end), t];
                 mag1_buf = [mag1_buf(2:end), mag1_dyn]; z1_buf = [z1_buf(2:end), z1_raw]; 
                 mag2_buf = [mag2_buf(2:end), mag2_dyn]; z2_buf = [z2_buf(2:end), z2_raw]; 

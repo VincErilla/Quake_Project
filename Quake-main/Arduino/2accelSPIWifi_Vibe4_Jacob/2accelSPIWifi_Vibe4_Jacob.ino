@@ -7,7 +7,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <WebServer.h>
-#include <RTClib.h> 
 
 // WiFi credentials
 const char* ssid = "ESP32-Graph";
@@ -21,15 +20,11 @@ String latestData = "";
 #define SD_CS_PIN 4
 
 // SPI pins for custom bus
-#define HSPI_MISO 15
-#define HSPI_MOSI 27
+#define HSPI_MISO 36
+#define HSPI_MOSI 15
 #define HSPI_SCK 14
 #define CS1 32
 #define CS2 20
-
-// I2C pins for RTC
-#define SDA_PIN 22
-#define SCL_PIN 33
 
 #define LED_RED 25
 #define LED_BLUE 26
@@ -40,48 +35,38 @@ SPIClass spiAccel(HSPI);
 ADXL345_WE accel1 = ADXL345_WE(&spiAccel, CS1, spi);
 ADXL345_WE accel2 = ADXL345_WE(&spiAccel, CS2, spi);
 
-RTC_DS3231 rtc;
 File f;
-char filename[40]; 
-
-// State tracking variable
-bool isRecording = false; 
+File countFile;
+const char* countFileName = "/runCount.txt";
+char filename[30];
 
 unsigned long lastSampleTime = 0;
-const unsigned long samplingIntervalMicros = 2000; // ~500 Hz
+const unsigned long samplingIntervalMicros = 1250; // ~800 Hz
 unsigned long startTime = 0;
 
-float t;
-// Global holding variables for historical backup tracking
-float last_x1 = 0.0, last_y1 = 0.0, last_z1 = 1.0;
-float last_x2 = 0.0, last_y2 = 0.0, last_z2 = 1.0;
+float t, x1_c, y1_c, z1_c, x2_c, y2_c, z2_c;
+const float gravity = 9.806;
 
-// Precision Ellipsoidal Calibration Coefficients
 const float A1_inv[3][3] = {
- {1.224426, 0.022806, 0.017952}, 
- {0.022806, 1.040584, -0.033441}, 
- {0.017952, -0.033441, 1.073030}   
+  {0.965419, 0.013208, -0.026215},
+  {0.013208, 1.013518, 0.017891},
+  {-0.026215, 0.017891, 1.020541}
 };
-const float b1[3] = {-0.022412, -0.045520, -0.094355};
+
+const float b1[3] = {-0.006932, -0.028482, -0.031183};
 
 const float A2_inv[3][3] = {
- {1.174304, -0.018755, -0.076771}, 
- {-0.018755, 1.037578, -0.044846}, 
- {-0.076771, -0.044846, 1.042790} 
+  {0.987355, -0.012097, 0.015757},
+  {-0.012097, 0.980370, 0.003362},
+  {0.015757, 0.003362, 1.003629}
 };
-const float b2[3] = {-0.023997, -0.002074, 0.005295};
+
+const float b2[3] = {-0.034468, -0.041362, 0.241468};
 
 TaskHandle_t sdWriterTaskHandle;
 String activeBuffer = "";
 String writeBuffer = "";
 portMUX_TYPE bufferMux = portMUX_INITIALIZER_UNLOCKED;
-
-void createFilename() {
-  DateTime now = rtc.now();
-  snprintf(filename, sizeof(filename), "/quakeData_%04d%02d%02d_%02d%02d%02d.csv",
-           now.year(), now.month(), now.day(), 
-           now.hour(), now.minute(), now.second());
-}
 
 void applyCalibration(float& x, float& y, float& z, const float A_inv[3][3], const float b[3]) {
   float x_new = A_inv[0][0] * (x - b[0]) + A_inv[0][1] * (y - b[1]) + A_inv[0][2] * (z - b[2]);
@@ -105,6 +90,7 @@ void handleRoot() {
       <canvas id="chartY" width="800" height="250"></canvas>
       <canvas id="chartZ" width="800" height="250"></canvas>
       <canvas id="chartRMS" width="800" height="250"></canvas>
+
       <script>
         const createChart = (ctx, label1, label2, color1, color2) => {
           return new Chart(ctx, {
@@ -126,12 +112,14 @@ void handleRoot() {
             }
           });
         };
+
         const charts = {
           x: createChart(document.getElementById('chartX').getContext('2d'), 'X1', 'X2', 'red', 'blue'),
           y: createChart(document.getElementById('chartY').getContext('2d'), 'Y1', 'Y2', 'green', 'purple'),
           z: createChart(document.getElementById('chartZ').getContext('2d'), 'Z1', 'Z2', 'orange', 'cyan'),
           rms: createChart(document.getElementById('chartRMS').getContext('2d'), 'RMS1', 'RMS2', 'black', 'gray')
         };
+
         async function fetchData() {
           const res = await fetch("/data");
           const txt = await res.text();
@@ -139,10 +127,12 @@ void handleRoot() {
           if (vals.length == 9) {
             const time = parseFloat(vals[0]);
             const [x1, x2, y1, y2, z1, z2, rms1, rms2] = vals.slice(1).map(parseFloat);
+
             for (let key in charts) {
               charts[key].data.labels.push(time);
               if (charts[key].data.labels.length > 100) charts[key].data.labels.shift();
             }
+
             charts.x.data.datasets[0].data.push(x1);
             charts.x.data.datasets[1].data.push(x2);
             charts.y.data.datasets[0].data.push(y1);
@@ -151,6 +141,7 @@ void handleRoot() {
             charts.z.data.datasets[1].data.push(z2);
             charts.rms.data.datasets[0].data.push(rms1);
             charts.rms.data.datasets[1].data.push(rms2);
+
             ['x', 'y', 'z', 'rms'].forEach(k => {
               if (charts[k].data.datasets[0].data.length > 100) {
                 charts[k].data.datasets[0].data.shift();
@@ -167,6 +158,7 @@ void handleRoot() {
   )rawliteral");
 }
 
+
 void handleData() {
   server.send(200, "text/plain", latestData);
 }
@@ -176,6 +168,7 @@ void setupWiFi() {
   IPAddress IP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
   Serial.println(IP);
+
   server.on("/", handleRoot);
   server.on("/data", handleData);
   server.begin();
@@ -189,20 +182,17 @@ void writeToSDTask(void* pvParameters) {
     portENTER_CRITICAL(&bufferMux);
     writeBuffer = activeBuffer;
     activeBuffer = "";
-    activeBuffer.reserve(32768); 
     portEXIT_CRITICAL(&bufferMux);
     temp = writeBuffer;
+
     unsigned long now = millis();
-    
-    // Only attempt to write if we have a valid filename set and data in the buffer
-    if (isRecording && temp.length() > 0) {
-      if (temp.length() >= 1024 || now - lastWriteTime >= 2000) {
-        File f = SD.open(filename, FILE_APPEND);
-        if (f) {
-          f.write((const uint8_t*)temp.c_str(), temp.length());
-          f.close();
-          lastWriteTime = now;
-        }
+    if (temp.length() >= 1024 || now - lastWriteTime >= 2000) {
+      File f = SD.open(filename, FILE_APPEND);
+      if (f) {
+        f.write((const uint8_t*)temp.c_str(), temp.length());
+        f.close();
+        // Serial.println(temp.c_str());
+        lastWriteTime = now;
       }
     }
     vTaskDelay(pdMS_TO_TICKS(1000));
@@ -210,25 +200,12 @@ void writeToSDTask(void* pvParameters) {
 }
 
 void setup() {
-  Serial.begin(115200); 
+  Serial.begin(230400);
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_BLUE, OUTPUT);
   pinMode(START_BUTTON, INPUT);
 
-  activeBuffer.reserve(32768);
-  writeBuffer.reserve(32768);
-
   setupWiFi();
-  Wire.begin(SDA_PIN, SCL_PIN);
-
-  if (!rtc.begin(&Wire)) {
-    Serial.println("Couldn't find RTC module!");
-    while (1);
-  }
-  if (rtc.lostPower()) {
-    Serial.println("RTC lost power, syncing compile date configurations...");
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-  }
 
   if (!SD.begin(SD_CS_PIN)) {
     Serial.println("SD card init failed!");
@@ -238,163 +215,129 @@ void setup() {
     }
   }
 
-  // Engage internal software pull-up on GPIO 15 to combat crosstalk
-  pinMode(HSPI_MISO, INPUT_PULLUP);
-
-  // OPTIMIZATION: 500kHz for clean SPI square-waves over long lines
   spiAccel.begin(HSPI_SCK, HSPI_MISO, HSPI_MOSI, -1);
-  spiAccel.setFrequency(500000); 
-
-  // --- INDIVIDUAL ACCELEROMETER INITIALIZATION VERIFICATION ---
-  bool init1 = accel1.init();
-  bool init2 = accel2.init();
-
-  if (!init1 || !init2) {
-    Serial.println("\n=========================================");
-    Serial.println("[FATAL] ACCELEROMETER INITIALIZATION FAILED!");
-    
-    if (!init1) {
-      Serial.printf(" -> SENSOR 1 (CS Pin %d): NOT RESPONDING\n", CS1);
-    } else {
-      Serial.printf(" -> SENSOR 1 (CS Pin %d): OK\n", CS1);
-    }
-
-    if (!init2) {
-      Serial.printf(" -> SENSOR 2 (CS Pin %d): NOT RESPONDING\n", CS2);
-    } else {
-      Serial.printf(" -> SENSOR 2 (CS Pin %d): OK\n", CS2);
-    }
-    Serial.println("=========================================\n");
-
-    // Lock system down in flashing diagnostic indicator state
+  if (!accel1.init() || !accel2.init()) {
+    Serial.println("Accelerometer init failed!");
+    Serial.print("Accel 1: "); Serial.println(accel1.init());
+    Serial.print("Accel 2: ");Serial.println(accel2.init());
     while (1) {
       digitalWrite(LED_RED, HIGH); digitalWrite(LED_BLUE, HIGH); delay(250);
       digitalWrite(LED_RED, LOW); digitalWrite(LED_BLUE, LOW); delay(250);
     }
+  } else {
+    Serial.println("Accelerometers initalized (yay)");
   }
 
-  // If both pass, safely configure sampling thresholds
-  accel1.setDataRate(ADXL345_DATA_RATE_800);
-  accel2.setDataRate(ADXL345_DATA_RATE_800);
+  accel1.setDataRate(ADXL345_DATA_RATE_1600);
+  accel2.setDataRate(ADXL345_DATA_RATE_1600);
   accel1.setRange(ADXL345_RANGE_16G);
   accel2.setRange(ADXL345_RANGE_16G);
 
-  // Start back-end tasks on Core 0
   xTaskCreatePinnedToCore(writeToSDTask, "SDWriterTask", 4096, NULL, 1, &sdWriterTaskHandle, 0);
 
-  // Ready indicator: Light up the RED LED to let user know we are waiting for a press
   digitalWrite(LED_RED, HIGH);
+  while (digitalRead(START_BUTTON) == LOW) delay(50);
+  digitalWrite(LED_RED, LOW);
+  digitalWrite(LED_BLUE, HIGH);
+
+  int runCount = 0;
+  countFile = SD.open(countFileName, FILE_READ);
+  if (countFile) {
+    runCount = countFile.parseInt();
+    countFile.close();
+  }
+  
+  runCount++;
+  countFile = SD.open(countFileName, FILE_WRITE);
+  if (countFile) {
+    countFile.println(runCount);
+    countFile.close();
+  }
+
+  sprintf(filename, "/quakeData_%d.csv", runCount);
+  f = SD.open(filename, FILE_WRITE);
+  if (f) {
+    f.println("Time,X1,Y1,Z1,X2,Y2,Z2");
+    f.close();
+  }
+
+  startTime = micros();
+
 }
 
 void loop() {
-  // 1. Wait for button press to start recording
-  if (!isRecording) {
-    if (digitalRead(START_BUTTON) == HIGH) {
-      delay(50); // Simple debounce
-      
-      // Grab the EXACT time from the RTC right now!
-      createFilename(); 
-      
-      // Open the new file and write headers
-      File f = SD.open(filename, FILE_WRITE);
-      if (f) {
-        f.println("Time,X1,Y1,Z1,X2,Y2,Z2");
-        f.close();
-      }
-      
-      // Visual indicators shift: Green light/Blue light means active run!
-      digitalWrite(LED_RED, LOW);
-      digitalWrite(LED_BLUE, HIGH);
-
-      startTime = micros();
-      lastSampleTime = 0; // reset local sampling reference
-      isRecording = true;
-      Serial.println("Recording started...");
-    }
-    
-    // Always serve web requests, even while idle
-    server.handleClient();
-    return; 
-  }
-  
-  // 2. ACTIVE RUNNING STATE
   unsigned long now = micros() - startTime;
-
-  if (now - lastSampleTime > 8000) {
-    lastSampleTime = now - 2000;
-  }
-
-  while (now - lastSampleTime >= 2000) {
-    lastSampleTime += 2000; 
+  if (now - lastSampleTime >= samplingIntervalMicros) {
+    lastSampleTime += samplingIntervalMicros;
 
     xyzFloat e1, e2;
     accel1.getGValues(&e1);
-    delayMicroseconds(20);
     accel2.getGValues(&e2);
-    delayMicroseconds(20);
 
-    // --- RAW VALUES FAULT INTERCEPTION: SENSOR 1 ---
-    float x1_raw, y1_raw, z1_raw;
-    if (e1.x == 0.0 && e1.y == 0.0 && e1.z == 0.0) {
-       x1_raw = last_x1; y1_raw = last_y1; z1_raw = last_z1;
-    } else {
-       x1_raw = e1.x; 
-       y1_raw = e1.y; 
-       z1_raw = e1.z;
-       last_x1 = x1_raw; last_y1 = y1_raw; last_z1 = z1_raw;
-    }
+    float x1_raw = e1.x, y1_raw = e1.y, z1_raw = e1.z;
+    float x2_raw = e2.x, y2_raw = e2.y, z2_raw = e2.z;
 
-    // --- RAW VALUES FAULT INTERCEPTION: SENSOR 2 ---
-    float x2_raw, y2_raw, z2_raw;
-    if (e2.x == 0.0 && e2.y == 0.0 && e2.z == 0.0) {
-       x2_raw = last_x2; y2_raw = last_y2; z2_raw = last_z2;
-    } else {
-       x2_raw = e2.x; 
-       y2_raw = e2.y; 
-       z2_raw = e2.z;
-       last_x2 = x2_raw; last_y2 = y2_raw; last_z2 = z2_raw;
-    }
+    /*
+    // two point calibration choose one or the other
+    float accel1_xmin = -0.94, accel1_ymin = -1.06, accel1_zmin = -1.01;
+    float accel1_xmax = 0.99, accel1_ymax = 0.91, accel1_zmax = 0.94;
+    
+    float accel2_xmin = -0.98, accel2_ymin = -1.03, accel2_zmin = -1.00;
+    float accel2_xmax = 1.03, accel2_ymax = 0.96, accel2_zmax = 0.93;
 
-    // Apply Calibration Matrices
-    float x1_cal = x1_raw; float y1_cal = y1_raw; float z1_cal = z1_raw;
+    float accel1_rawxrange = 1.93, accel1_rawyrange = 1.97, accel1_rawzrange = 1.95;
+    float referenceRange = 2, referenceLow = -1;
+
+    float accel2_rawxrange = 1.93, accel2_rawyrange = 1.97, accel2_rawzrange = 1.95;
+
+    float x1_cal = (((x1_raw - accel1_xmin) * referenceRange) / accel1_rawxrange) + referenceLow;
+    float y1_cal = (((y1_raw - accel1_ymin) * referenceRange) / accel1_rawyrange) + referenceLow;
+    float z1_cal = (((z1_raw - accel1_zmin) * referenceRange) / accel1_rawzrange) + referenceLow;
+
+    float x2_cal = (((x2_raw - accel2_xmin) * referenceRange) / accel2_rawxrange) + referenceLow;
+    float y2_cal = (((y2_raw - accel2_ymin) * referenceRange) / accel2_rawyrange) + referenceLow;
+    float z2_cal = (((z2_raw - accel2_zmin) * referenceRange) / accel2_rawzrange) + referenceLow;
+    */
+
+    // Magneto Calibration choose one or the other
+    float x1_cal = x1_raw;
+    float y1_cal = y1_raw;
+    float z1_cal = z1_raw;
     applyCalibration(x1_cal, y1_cal, z1_cal, A1_inv, b1);
 
-    float x2_cal = x2_raw; float y2_cal = y2_raw; float z2_cal = z2_raw;
+    x1_cal /= gravity;
+    y1_cal /= gravity;
+    z1_cal /= gravity;
+
+    float x2_cal = x2_raw;
+    float y2_cal = y2_raw;
+    float z2_cal = z2_raw;
     applyCalibration(x2_cal, y2_cal, z2_cal, A2_inv, b2);
 
-    t = lastSampleTime / 1000000.0;
+    x2_cal /= gravity;
+    y2_cal /= gravity;
+    z2_cal /= gravity;
 
-    // Throttled Full 6-Axis Streaming Output Block (~166.67 Hz decimation)
-    static int serialThrottleCounter = 0;
-    serialThrottleCounter++;
-    if (serialThrottleCounter >= 3) { 
-        Serial.printf("%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n", t, x1_cal, y1_cal, z1_cal, x2_cal, y2_cal, z2_cal);
-        serialThrottleCounter = 0; 
-    }
-
-    char line[120];
-    snprintf(line, sizeof(line), "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
+    // CorrectedValue = (((RawValue – RawLow) * ReferenceRange) / RawRange) + ReferenceLow
+    t = now / 1e6;
+    char line[100];
+    snprintf(line, sizeof(line), "%.4f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n",
              t, x1_cal, y1_cal, z1_cal, x2_cal, y2_cal, z2_cal);
 
-    // Time-Gated Web JSON Generation (10 Hz)
-    static unsigned long lastWebUpdateTime = 0;
-    if (millis() - lastWebUpdateTime >= 100) {
-      lastWebUpdateTime = millis();
-      latestData = String(t, 4) + "," +
-                   String(x1_cal, 2) + "," + String(x2_cal, 2) + "," +
-                   String(y1_cal, 2) + "," + String(y2_cal, 2) + "," +
-                   String(z1_cal, 2) + "," + String(z2_cal, 2) + "," +
-                   String(sqrt((x1_cal*x1_cal + y1_cal*y1_cal + z1_cal*z1_cal)/3.0), 2) + "," +
-                   String(sqrt((x2_cal*x2_cal + y2_cal*y2_cal + z2_cal*z2_cal)/3.0), 2);
-    }
+    latestData = String(t, 4) + "," +
+             String(x1_cal, 2) + "," + String(x2_cal, 2) + "," +
+             String(y1_cal, 2) + "," + String(y2_cal, 2) + "," +
+             String(z1_cal, 2) + "," + String(z2_cal, 2) + "," +
+             String(sqrt((x1_cal*x1_cal + y1_cal*y1_cal + z1_cal*z1_cal)/3.0), 2) + "," +
+             String(sqrt((x2_cal*x2_cal + y2_cal*y2_cal + z2_cal*z2_cal)/3.0), 2);
+
+    Serial.println(line);
 
     portENTER_CRITICAL(&bufferMux);
     activeBuffer += line;
     portEXIT_CRITICAL(&bufferMux);
   }
 
-  // --- SHUTDOWN SEQUENCE MANEUVER ---
-  // Now triggers correctly if button is pressed during active recording
   if (now > 2000000 && digitalRead(START_BUTTON) == HIGH) {
     digitalWrite(LED_BLUE, LOW); delay(100);
     digitalWrite(LED_RED, HIGH); digitalWrite(LED_BLUE, HIGH); delay(100);
@@ -403,5 +346,6 @@ void loop() {
     digitalWrite(LED_RED, LOW); digitalWrite(LED_BLUE, LOW);
     exit(0);
   }
+
   server.handleClient();
 }
